@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Creation Agent</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles if needed, but Tailwind should cover most */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl p-8 max-w-3xl w-full">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-6 text-center">🎙️ Content Creation Agent 💡</h1>
+        <p class="text-gray-600 mb-8 text-center">Your personal assistant for generating premium podcast scripts and fresh content ideas.</p>
+
+        <div class="space-y-6 mb-8">
+            <div>
+                <label for="topic" class="block text-sm font-medium text-gray-700 mb-1">Podcast Topic / Theme:</label>
+                <textarea id="topic" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3" placeholder="e.g., The Future of AI in Daily Life, Mastering Remote Work Productivity, Healthy Eating Myths"></textarea>
+            </div>
+
+            <div>
+                <label for="tone" class="block text-sm font-medium text-gray-700 mb-1">Desired Tone:</label>
+                <input type="text" id="tone" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3" placeholder="e.g., informative, humorous, motivational, conversational, expert-level">
+            </div>
+
+            <div>
+                <label for="audience" class="block text-sm font-medium text-gray-700 mb-1">Target Audience:</label>
+                <input type="text" id="audience" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3" placeholder="e.g., young professionals, small business owners, tech enthusiasts, general public">
+            </div>
+
+            <div>
+                <label for="duration" class="block text-sm font-medium text-gray-700 mb-1">Approximate Duration (minutes):</label>
+                <input type="number" id="duration" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3" value="15" min="5" max="60">
+            </div>
+
+            <button id="generateBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                Generate Script & Ideas
+            </button>
+        </div>
+
+        <div id="loading" class="hidden text-center text-indigo-600 font-semibold mb-6">
+            Generating content... Please wait.
+        </div>
+
+        <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline" id="errorMessage"></span>
+        </div>
+
+        <div id="output" class="border-t pt-8 mt-8 border-gray-200 space-y-8">
+            <div id="scriptOutput" class="bg-gray-50 p-6 rounded-md shadow-sm">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Podcast Script</h2>
+                <div class="prose max-w-none text-gray-700" id="scriptContent">
+                    <p class="text-gray-500 italic">Your generated script will appear here.</p>
+                </div>
+            </div>
+
+            <div id="ideasOutput" class="bg-gray-50 p-6 rounded-md shadow-sm">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Content Ideas</h2>
+                <div class="prose max-w-none text-gray-700" id="ideasContent">
+                    <p class="text-gray-500 italic">Related content ideas will appear here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // IMPORTANT: Replace with your actual Google Gemini API Key
+        // Get your API key from Google AI Studio: https://aistudio.google.com/app/apikey
+        const GEMINI_API_KEY = "AIzaSyDTBUAQb8C3yBtyxItGHwzWZ4pn6nIhjGU"; 
+        const GEMINI_MODEL = "gemini-2.5-flash"; // Or "gemini-2.5-flash-latest" for newer models if available
+        const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+        const topicInput = document.getElementById('topic');
+        const toneInput = document.getElementById('tone');
+        const audienceInput = document.getElementById('audience');
+        const durationInput = document.getElementById('duration');
+        const generateBtn = document.getElementById('generateBtn');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const errorMessageSpan = document.getElementById('errorMessage');
+        const scriptContentDiv = document.getElementById('scriptContent');
+        const ideasContentDiv = document.getElementById('ideasContent');
+
+        // Function to display errors
+        function displayError(message) {
+            errorMessageSpan.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        // Function to clear outputs
+        function clearOutputs() {
+            scriptContentDiv.innerHTML = '<p class="text-gray-500 italic">Your generated script will appear here.</p>';
+            ideasContentDiv.innerHTML = '<p class="text-gray-500 italic">Related content ideas will appear here.</p>';
+            errorDiv.classList.add('hidden');
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            const topic = topicInput.value.trim();
+            const tone = toneInput.value.trim();
+            const audience = audienceInput.value.trim();
+            const duration = durationInput.value.trim();
+
+            clearOutputs();
+
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
+                displayError("Please replace 'YOUR_GEMINI_API_KEY_HERE' with your actual Google Gemini API key in the script.");
+                return;
+            }
+
+            if (!topic || !tone || !audience || !duration) {
+                displayError("Please fill in all input fields to generate content.");
+                return;
+            }
+
+            loadingDiv.classList.remove('hidden');
+            generateBtn.disabled = true;
+
+            const prompt = `
+            As an expert podcast scriptwriter and content strategist, generate a detailed podcast script and a list of related content ideas.
+
+            **Podcast Details:**
+            - Topic: ${topic}
+            - Tone: ${tone}
+            - Target Audience: ${audience}
+            - Duration: ${duration} minutes
+
+            **Requirements:**
+            1.  **Podcast Script:**
+                *   Develop a professional, engaging, and high-quality script for a ${duration} minute podcast.
+                *   The script should have a "premium feel," meaning it's well-structured, articulate, insightful, and designed to captivate the ${audience}.
+                *   Include an engaging intro, main segments with smooth transitions, compelling talking points, and a strong call to action or conclusion.
+                *   Format clearly with speaker notes or distinct sections (e.g., Intro, Segment 1, Conclusion).
+                *   Ensure the language and depth are appropriate for the specified tone and target audience.
+                *   Output the script in Markdown format.
+            2.  **Content Ideas:**
+                *   Generate 3-5 distinct and creative content ideas related to the main podcast topic "${topic}".
+                *   These ideas should align with the "premium feel" ethos, suggesting further in-depth discussions, unique perspectives, or innovative formats (e.g., interview guests, mini-series concepts, interactive segments).
+                *   Each idea should be briefly described.
+                *   Output the ideas in Markdown format, as a bulleted list.
+
+            **Output Format:**
+            Please use the following distinct Markdown headings to separate the script and ideas:
+
+            ## Podcast Script
+            [Generated script content here]
+
+            ## Content Ideas
+            [Generated content ideas here]
+            `;
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API Error: ${response.status} - ${errorData.error.message || 'Unknown error'}`);
+                }
+
+                const data = await response.json();
+                const generatedText = data.candidates[0]?.content?.parts[0]?.text;
+
+                if (generatedText) {
+                    // Split the generated text into script and ideas based on the headings
+                    const scriptMatch = generatedText.match(/## Podcast Script\s*([\s\S]*?)(?=## Content Ideas|$)/i);
+                    const ideasMatch = generatedText.match(/## Content Ideas\s*([\s\S]*)/i);
+
+                    let script = scriptMatch ? scriptMatch[1].trim() : "Could not extract script. Raw output:\n" + generatedText;
+                    let ideas = ideasMatch ? ideasMatch[1].trim() : "Could not extract ideas. Raw output:\n" + generatedText;
+
+                    // Basic Markdown to HTML conversion for display (can be improved with a library like 'marked.js')
+                    scriptContentDiv.innerHTML = marked(script);
+                    ideasContentDiv.innerHTML = marked(ideas);
+
+                } else {
+                    displayError("No content generated. Please try again with different inputs.");
+                    console.error("Gemini API response:", data);
+                }
+
+            } catch (error) {
+                console.error("Error generating content:", error);
+                displayError(`Failed to generate content: ${error.message || 'Network error or invalid API response.'}`);
+            } finally {
+                loadingDiv.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        });
+
+        // Simple Markdown to HTML converter (for basic formatting, can be replaced by a library like 'marked.js')
+        function marked(markdown) {
+            let html = markdown
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>') // H3
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')   // H2
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')     // H1
+                .replace(/^\* (.*$)/gim, '<li>$1</li>')     // Unordered list
+                .replace(/^\- (.*$)/gim, '<li>$1</li>')     // Unordered list
+                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>') // Bold
+                .replace(/\*(.*)\*/gim, '<em>$1</em>') // Italic
+                .replace(/`(.*?)`/gim, '<code>$1</code>') // Inline code
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2">$1</a>'); // Links
+
+            // Add paragraphs for lines not part of lists or headings
+            html = html.split('\n').map(line => {
+                if (!line.trim().startsWith('<h') && !line.trim().startsWith('<li') && line.trim() !== '') {
+                    return `<p>${line.trim()}</p>`;
+                }
+                return line;
+            }).join('');
+
+            // Wrap list items in <ul>
+            html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+
+            return html;
+        }
+
+        // Initial setup for the prompt (optional)
+        topicInput.value = "The importance of mindfulness in a fast-paced world";
+        toneInput.value = "inspirational and practical";
+        audienceInput.value = "anyone seeking stress reduction and personal growth";
+        durationInput.value = 10;
+    </script>
+</body>
+</html>
